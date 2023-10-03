@@ -1,108 +1,81 @@
-import { BleClient } from '@capacitor-community/bluetooth-le';
-
 const sidecarMessage = document.getElementById('sidecar-msg') as HTMLElement
-
 const display = (message: string) => {
-  sidecarMessage.innerText += `${message}\n`
+  sidecarMessage.innerHTML += `<p>${message}</p>`
 }
 
-const onData = (data: any) => {
-  if (data.error) return console.error(data.error)
-  display(`${data.command} - ${data.payload}`)
+const clear = () => sidecarMessage.innerText = ''
+
+Plotly.newPlot('plotly', []);
+
+const updatePlot = ({ data, timestamps }: any) => {
+  Plotly.react('plotly', data.map(channel => {
+    return {
+      x: timestamps,
+      y: channel,
+      type: 'scatter',
+      showlegend: false,
+      hoverinfo:'skip'
+    }
+  }, []))
 }
 
-// Remote API Tests
-if (COMMONERS.services.remote && COMMONERS.services.remoteConfig) {
-  try {
-    const remoteAPI = new URL('/users', COMMONERS.services.remote.url)
-    const remoteAPIConfigured = new URL('/users', COMMONERS.services.remoteConfig.url)
 
-    setTimeout(() => {
 
-      fetch(remoteAPI)
-      .then(response => response.json())
-      .then(json => display(`Remote Response Length: ${json.length}`))
 
-      fetch(remoteAPIConfigured)
-      .then(response => response.json())
-      .then(json => display(`Remote (Config) Response Length: ${json.length}`))
+const pythonUrl = new URL(COMMONERS.services.python.url) // Equivalent to commoners://python
+
+const button = document.querySelector('button') as HTMLButtonElement
+const input = document.querySelector('input') as HTMLInputElement
+button.onclick = () => {
+  onSubmit(input.value)
+}
+
+
+async function post(url: string | URL, payload: any) {
+
+  const start = performance.now()
+  const res = await fetch(
+    url, 
+    {
+      method: "POST", 
+      body: JSON.stringify(payload)
+    }
+  )
+  .then(res => res.json())
+
+  console.log(`Time to run: (${url}): ${(performance.now() - start).toFixed(3)}ms`)
+
+  return res
+}
+
+const onSubmit = async(s3_url: string) => {
+
+
+  clear()
+  display(`Attempting to Initialize: <small>${s3_url}</small>`)
+
+  await post(
+    new URL('init', pythonUrl), 
+    { s3_url }
+  )
+  .then(async (metadata) => {
+
+    display(`Initialized: <small>${JSON.stringify(metadata)}</small>`)
+
+    const user_opts = {
+      s3_url,
+      start_time: 0,
+      end_time: 1,
+      channel_indices: Array.from({length: 25 }, (_,i) => i)
+    }
+
+    await post(
+      new URL('get', pythonUrl), 
+      user_opts
+    )
+    .then((res) => {
+      updatePlot(res)
     })
-  } catch (e) {
-    console.error('Remote URLs not configured')
-  }
-} 
-
-
-
-
-// --------- Node Service Test ---------
-if (COMMONERS.services.node) {
-  const url = new URL(COMMONERS.services.node.url)
-
-  const ws = new WebSocket(`ws://${url.host}`)
-
-  ws.onmessage = (o) => onData(JSON.parse(o.data))
-
-  let send = (o: any) => {
-    ws.send(JSON.stringify(o))
-  }
-
-  ws.onopen = () => {
-    send({ command: 'test', payload: true })
-    send({ command: 'platform' })
-  }
+  })
 }
 
-// --------- Python Service Test ---------
-if (COMMONERS.services.python) {
- 
-  const pythonUrl = new URL(COMMONERS.services.python.url) // Equivalent to commoners://python
-
-  setTimeout(() => fetch(pythonUrl).then(res => res.json()).then(onData))
-}
-
-
-
-// --------- Web Serial Test ---------
-async function requestSerialPort () {
-
-  try {
-
-    const port = await navigator.serial.requestPort({ 
-      // filters
-    })
-    const portInfo = port.getInfo()
-    display(`Connected to Serial Port: vendorId: ${portInfo.usbVendorId} | productId: ${portInfo.usbProductId}`)
-  } catch (e: any) {
-    console.error(e)
-  }
-}
-
-// NOTE: Not required when served with Vite—but required for Live Server
-globalThis.COMMONERS.ready.then(() => {
-
-  const testSerialConnection = document.getElementById('testSerialConnection')
-  if (testSerialConnection) {
-    if ('serial' in COMMONERS.plugins.loaded) testSerialConnection.addEventListener('click', requestSerialPort)
-    else testSerialConnection.setAttribute('disabled', '')
-  }
-  // --------- Web Bluetooth Test ---------
-  async function requestBluetoothDevice () {
-
-    // Use the Capacitor API to support mobile
-    await BleClient.initialize();
-    const device = await BleClient.requestDevice();
-
-    // const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true })
-    console.log(device)
-    display(`Connected to Bluetooth Device: ${device.name || `ID: ${device.id}`}`)
-  }
-
-  const testBluetoothConnection = document.getElementById('testBluetoothConnection')
-
-  if (testBluetoothConnection) {
-    if ('bluetooth' in COMMONERS.plugins.loaded) testBluetoothConnection.addEventListener('click', requestBluetoothDevice)
-    else testBluetoothConnection.setAttribute('disabled', '')
-  }
-
-})
