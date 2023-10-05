@@ -2,7 +2,7 @@ const defineConfig = (o) => o
 
 export default defineConfig({
     
-    icon: './src/assets/commoners.png', 
+    icon: './src/assets/logo.png', 
 
     services: {
 
