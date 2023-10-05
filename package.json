@@ -1,19 +1,15 @@
 {
-  "name": "COMMONERS",
+  "name": "Traces",
   "version": "0.0.0",
-  "description": "A template COMMONERS applications.",
+  "description": "An application to view electrophysiology traces.",
   "main": "./dist/.commoners/main/index.js",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "src/**"
-  ],
   "scripts": {
     "start": "commoners --desktop",
     "dev": "commoners",
     "services": "commoners --services",
     "service:python": "commoners --service python",
-
     "build": "commoners build",
     "build:frontend": "commoners build --frontend",
     "build:services": "commoners build --services"
@@ -22,6 +18,6 @@
     "@capacitor/assets": "^2.0.4",
     "@capacitor/cli": "^5.3.0",
     "@capacitor/core": "^5.3.0",
-    "commoners": "0.0.9"
+    "commoners": "0.0.11"
   }
 }

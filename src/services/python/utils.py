@@ -31,22 +31,24 @@ def get_traces(
 def init_zarr(
     s3_url: str
 ):
+    
     try:
         import spikeinterface as si
 
-        if (instances[s3_url]):
-            return instances[s3_url]
+        if (instances.get(s3_url)):
+            recording = instances[s3_url]
 
-        recording = si.read_zarr(s3_url) # Instantiate this once
-        instances[s3_url] = recording
+        else: 
+            recording = si.read_zarr(s3_url) # Instantiate this once
+            instances[s3_url] = recording
 
         return dict(
             # nFrames = recording.get_num_frames(),
             # nSamples = recording.get_num_samples(),
             nSegments = recording.get_num_segments(),
             samples = recording.get_total_samples(),
-            duration=recording.get_total_duration()
+            duration = recording.get_total_duration()
         )
     
-    except Exception:
-        return None
+    except Exception as e:
+        return { "error": repr(e) }

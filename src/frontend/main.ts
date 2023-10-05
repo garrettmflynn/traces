@@ -45,6 +45,8 @@ async function post(url: string | URL, payload: any) {
 
   console.log(`Time to run: (${url}): ${(performance.now() - start).toFixed(3)}ms`)
 
+  if (res.error) throw new Error(res.error)
+
   return res
 }
 
